@@ -8,9 +8,7 @@ function load() {
         let email = cookies.email;
 
         document.getElementById("welcomeMessage").innerHTML = `Bem-vindo(a), ${email}! Seu token expira em ${expiracao}`;
-    } else {
-        document.getElementById("welcomeMessage").innerHTML = "Você não está autenticado.";
-    }
+   
     console.log(cookies);
 
 }
@@ -39,4 +37,5 @@ function parseDate(dateString) {
         timeZoneName: 'short'
     };
     return date.toLocaleString('pt-BR', options);
+    }
 }

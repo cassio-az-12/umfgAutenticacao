@@ -1,7 +1,9 @@
 var urlBase = "https://umfgcloud-autenticacao-service-7e27ead80532.herokuapp.com";
 
-function exibirMensagem(texto, tipo) {
-    var mensagem = document.getElementById("mensagem");
+function exibirMensagem(texto, tipo, idElemento = "mensagem") {
+    var mensagem = document.getElementById(idElemento);
+    if (!mensagem) return;
+
     mensagem.innerText = texto;
     mensagem.className = "mensagem " + tipo;
     mensagem.style.display = "block";
@@ -11,22 +13,23 @@ function exibirMensagem(texto, tipo) {
     }, 60000);
 }
 
+
 function registrar() {
-    var email = document.getElementById("email").value;
-    var senha = document.getElementById("password").value;
-    var confirmarSenha = document.getElementById("confirmPassword").value;
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("password").value;
+    const confirmarSenha = document.getElementById("confirmPassword").value;
 
     if (email === "" || senha === "" || confirmarSenha === "") {
-        exibirMensagem("Por favor, preencha todos os campos.", "erro");
+        exibirMensagem("Por favor, preencha todos os campos.", "erro", "mensagemCadastro");
         return;
     }
 
     if (senha !== confirmarSenha) {
-        exibirMensagem("As senhas não coincidem.", "erro");
+        exibirMensagem("As senhas não coincidem.", "erro", "mensagemCadastro");
         return;
     }
 
-    var dados = {
+    const dados = {
         email: email,
         senha: senha,
         senhaConfirmada: confirmarSenha,
@@ -41,26 +44,49 @@ function registrar() {
     })
     .then(async resposta => {
         if (resposta.ok) {
-            exibirMensagem("Cadastro realizado com sucesso! Você já pode fazer login.", "sucesso");
+            exibirMensagem("Cadastro realizado com sucesso! Você já pode fazer login.", "sucesso", "mensagemCadastro");
             setTimeout(() => {
                 window.location.href = "index.html";
             }, 1500);
         } else {
-            exibirMensagem(await resposta.text(), "erro");
-         }
-        })
+            const jsonErro = await resposta.json();
+            if (jsonErro.errors) {
+                const mensagens = Object.values(jsonErro.errors).flat(); // Junta todas as mensagens de erro
+                exibirMensagem(mensagens.join(" "), "erro", "mensagemCadastro");
+            } else {
+                exibirMensagem("Erro ao cadastrar: " + jsonErro.title, "erro", "mensagemCadastro");
+            }
+        }
+    })
     .catch(erro => {
         console.error("Erro:", erro);
-        exibirMensagem("Ocorreu um erro ao tentar cadastrar.", "erro");
-        });
+        exibirMensagem("Ocorreu um erro ao tentar cadastrar.", "erro", "mensagemCadastro");
+    });
+}
+
+
+// Tradutor de mensagens de erro da API
+function traduzirMensagemErro(mensagem) {
+    if (mensagem.includes("already in use") || mensagem.includes("Email já registrado")) {
+        return "Este email já está em uso. Tente outro.";
+    }
+    if (mensagem.includes("Password must be at least")) {
+        return "A senha deve conter no mínimo 6 caracteres.";
+    }
+    if (mensagem.includes("Invalid email format")) {
+        return "Formato de email inválido.";
     }
 
-    function fazerLogin() {
+    // Mensagem padrão
+    return "Erro ao cadastrar: " + mensagem;
+}
+
+   function fazerLogin() {
     var emailLogin = document.getElementById("emailLog").value;
     var senhaLogin = document.getElementById("passwordLog").value;
 
     if (emailLogin === "" || senhaLogin === "") {
-        exibirMensagem("Por favor, preencha todos os campos.", "erro");
+        exibirMensagem("Por favor, preencha todos os campos.", "erro", "mensagemLogin");
         return;
     }
 
@@ -78,21 +104,30 @@ function registrar() {
     })
     .then(async resposta => {
         if (resposta.ok) {
-            var json = await resposta.json();
-            document.cookie = "email=" + emailLogin + "; path=/;";
-            document.cookie = "token=" + json.token + "; path=/;";
-            document.cookie = "dataExpiracao=" + json.dataExpiracao + "; path=/;";
-            exibirMensagem("Login realizado com sucesso!", "sucesso");
+            const json = await resposta.json();
+            document.cookie = `email=${emailLogin}; path=/; Secure; SameSite=Strict`;
+            document.cookie = `token=${json.token}; path=/; Secure; SameSite=Strict`;
+            document.cookie = `dataExpiracao=${json.dataExpiracao}; path=/; Secure; SameSite=Strict`;
+
+            exibirMensagem("Login realizado com sucesso!", "sucesso", "mensagemLogin");
             setTimeout(() => {
                 window.location.href = "home.html";
             }, 1000);
         } else {
-            exibirMensagem(await resposta.text(), "erro");
+            const texto = await resposta.text();
+
+            if (resposta.status === 400 || texto.toLowerCase().includes("senha") || texto.toLowerCase().includes("usuário")) {
+                exibirMensagem("Usuário ou senha inválidos.", "erro", "mensagemLogin");
+            } else {
+                exibirMensagem("Erro ao fazer login: " + texto, "erro", "mensagemLogin");
+            }
         }
-        })
+    })
     .catch(erro => {
         console.error("Erro:", erro);
-        exibirMensagem("Ocorreu um erro ao tentar fazer login.", "erro");
-     });
- }
+        exibirMensagem("Ocorreu um erro ao tentar fazer login.", "erro", "mensagemLogin");
+    });
+}
+
+
 
